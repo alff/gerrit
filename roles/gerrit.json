@@ -1,0 +1,22 @@
+{
+    "name": "gerrit",
+        "description": "",
+        "json_class": "Chef::Role",
+        "default_attributes": {
+        },
+        "override_attributes": {
+            "gerrit": {
+                "db": {
+                    "type": "MYSQL"
+                },
+                "auth_type": "OPENID"
+            }
+        },
+        "chef_type": "role",
+        "run_list": [
+            "role[java]",
+        "recipe[gerrit::server]"
+            ],
+        "env_run_lists": {
+        }
+}

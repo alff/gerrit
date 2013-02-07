@@ -1,0 +1,28 @@
+# Configuration files:
+#
+# /etc/default/gerritcodereview
+#   If it exists, sourced at the start of this script. It may perform any
+#   sequence of shell commands, like setting relevant environment variables.
+#
+# The files will be checked for existence before being sourced.
+
+# Configuration variables.  These may be set in /etc/default/gerritcodereview.
+#
+# GERRIT_SITE
+#   Path of the Gerrit site to run.  $GERRIT_SITE/etc/gerrit.config
+#   will be used to configure the process.
+GERRIT_SITE=<%= node["gerrit"]["tunable"]["gerrit_site"] %>
+#
+# GERRIT_WAR
+#   Location of the gerrit.war download that we will execute.  Defaults to
+#   container.war property in $GERRIT_SITE/etc/gerrit.config.
+GERRIT_WAR=$GERRIT_SITE/bin/gerrit.war
+#
+# NO_START
+#   If set to "1" disables Gerrit from starting.
+NO_START=<%= @no_start %>
+#
+# START_STOP_DAEMON
+#   If set to "0" disables using start-stop-daemon.  This may need to
+#   be set on SuSE systems.
+START_STOP_DAEMON=<%= @daemon_mode %>

@@ -1,0 +1,28 @@
+[core]
+        packedGitLimit = <%=node["gerrit"]["tunable"]["packet_git_limit"] %>
+        packedGitWindowSize = <%=node["gerrit"]["tunable"]["packet_windows_sz"] %>
+        streamFileThreshold = <%=node["gerrit"]["tunable"]["stream_treshold"] %>
+[gerrit]
+        basePath = <%=node["gerrit"]["tunable"]["base_path"] %>
+        canonicalWebUrl = http://<%= @canonical_url %>
+[database]
+        type = <%=node["gerrit"]["db"]["type"] %>
+        hostname = <%= @db_address %>
+        database = <%=node["gerrit"]["db"]["tunable"]["database"] %>
+        username = <%=node["gerrit"]["db"]["tunable"]["username"] %>
+        port = <%= @db_port %>
+[auth]
+        type = <%=node["gerrit"]["auth_type"] %>
+[sendemail]
+        smtpServer = <%=node["gerrit"]["tunable"]["smtp_server"] %>
+        smtpUser = <%=node["gerrit"]["tunable"]["smtp_user"] %>
+[container]
+        user = <%=node["gerrit"]["user"] %>
+        javaHome = <%=node["java"]["java_home"] %>
+        heapLimit = <%=node["gerrit"]["tunable"]["heap_limit"] %>
+[sshd]
+        listenAddress = *:<%=node["gerrit"]["tunable"]["ssh_listen_port"] %>
+[httpd]
+        listenUrl = http://<%=@listen_url %>/
+[cache]
+        directory = cache
