@@ -57,6 +57,7 @@ remote_file "#{gerrit_home}/gerrit_distr.war" do
   source "http://gerrit.googlecode.com/files/gerrit-full-#{node["gerrit"]["version"]}.war"
   owner node["gerrit"]["user"]
   group "gerrit"
+  not_if {File.exists?("#{gerrit_home}/gerrit_distr.war")}
 end
 
 # Prepare gerrit instalation
@@ -108,19 +109,20 @@ template "#{gerrit_home}/mysql_script.sql" do
     :db_address =>db_address
   )
 end
-
-execute "Create-gerrit-DB" do
+unless node["gerrit"]["init_state"] && node["gerrit"]["init_state"] == "ok"
+  #TODO: Need to inmprove this part (remove executes and scripts)
+  execute "Create-gerrit-DB" do
   case node["gerrit"]["db"]["type"]
   when "MYSQL"
     command "#{mysql_server['mysql']['mysql_bin']} -u root -p\"#{mysql_server['mysql']['server_root_password']}\" < #{gerrit_home}/mysql_script.sql"
   end
-end
+  end
 script "install-gerrit-package" do
   interpreter "bash"
   user node["gerrit"]["user"]
   group "gerrit"
   cwd gerrit_home
-code <<-EOH
+  code <<-EOH
 java -jar #{gerrit_home}/gerrit_distr.war init -d #{node["gerrit"]["tunable"]["gerrit_site"]} --batch
 EOH
 end
@@ -130,12 +132,18 @@ script "Enable-gerrit-service" do
   code <<-EOH
 ln -snf #{node["gerrit"]["tunable"]["gerrit_site"]}/bin/gerrit.sh #{node["gerrit"]["init"]["bin"]}/gerrit
   EOH
-#ln -snf #{node["gerrit"]["init"]["bin"]}/gerrit #{node["gerrit"]["init"]["run_level"]}/S90gerrit
+  #ln -snf #{node["gerrit"]["init"]["bin"]}/gerrit #{node["gerrit"]["init"]["run_level"]}/S90gerrit
 end
 service "gerrit" do
   action [:enable, :start]
 end
-
+ruby_block "Set-init-state" do
+  block do
+    node.set_unless["gerrit"]["init_state"] = "ok"
+    node.save
+  end
+end
+end
 ## PROJECT SETUP ##
 
 
