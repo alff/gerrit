@@ -169,6 +169,7 @@ creds = data_bag('users')
 ruby_block "Check-users" do
   block do
     db = Mysql.connect("#{db_address}", "#{node["gerrit"]["db"]["tunable"]["username"]}", "#{node["gerrit"]["db"]["tunable"]["password"]}", "#{node["gerrit"]["db"]["tunable"]["database"]}")
+    actual_list = []
     new_keys = 0
     new_users = 0
     updated_keys = 0
@@ -239,6 +240,20 @@ ruby_block "Check-users" do
         Chef::Log.info "Procedure of new user creating is complete. Account #{user["id"]} was added.."
         new_users +=1
       end
+      actual_list.push max_id
+    end
+    db = Mysql.connect("#{db_address}", "#{node["gerrit"]["db"]["tunable"]["username"]}", "#{node["gerrit"]["db"]["tunable"]["password"]}", "#{node["gerrit"]["db"]["tunable"]["database"]}")
+    current_list =[]
+    query = db.query("SELECT account_id FROM accounts")
+    query.each do |n|
+      current_list.push n[0]
+    end
+    disabled_list = actual_list - current_list
+    if disabled_list.size >0
+      disabled_ids = '"'+disabled_list.join('","')+'"'
+      Chef::Log.info "Disable users which are not in the current list.."
+      query = db.query("UPDATE `accounts` SET inactive='Y' WHERE NOT IN (disabled_ids)")
+      Chef::Log.info "Users disabled: #{disabled_list.size}"
     end
     Chef::Log.info "New users created: #{new_users}."
     Chef::Log.info "New keys added: #{new_keys}."
