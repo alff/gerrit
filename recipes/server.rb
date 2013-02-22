@@ -4,16 +4,24 @@
 
 # author Alex Khalkuziev (akhalkuziev@mirantis.com)
 
+chef_gem "ruby-mysql" do
+  action :install
+end
+
+require 'mysql'
+require 'yaml'
+
+
 ::Chef::Recipe.send(:include, Opscode::OpenSSL::Password)
 if Chef::Config[:solo]
    Chef::Application.fatal!("This version doesn't support solo mode..")
 else
-  node.set_unless["gerrit"]["db"]["password"] = secure_password
+  node.set_unless["gerrit"]["db"]["tunable"]["password"] = secure_password
   node.set_unless["gerrit"]["tunable"]["smtp_password"] = secure_password
   node.save
 end
 
-gerrit_home = "/home/gerrit"
+gerrit_home = node["gerrit"]["home"]
 #jdk instalation
 include_recipe "java"
 
@@ -132,11 +140,13 @@ script "Enable-gerrit-service" do
   code <<-EOH
 ln -snf #{node["gerrit"]["tunable"]["gerrit_site"]}/bin/gerrit.sh #{node["gerrit"]["init"]["bin"]}/gerrit
   EOH
-  #ln -snf #{node["gerrit"]["init"]["bin"]}/gerrit #{node["gerrit"]["init"]["run_level"]}/S90gerrit
 end
+
 service "gerrit" do
-  action [:enable, :start]
+  action [ :enable, :start ]
 end
+
+
 ruby_block "Set-init-state" do
   block do
     node.set_unless["gerrit"]["init_state"] = "ok"
@@ -145,6 +155,98 @@ ruby_block "Set-init-state" do
 end
 end
 ## PROJECT SETUP ##
-
-
-
+# This part contains tuned part of user management for ATnT specific environment
+#TODO: Get this file by more flawless method than cookbook_file 
+ci_file = cookbook_file "/tmp/infrastructure-users-ci.yml" do
+  action :nothing
+end
+ci_file.run_action(:create)
+# Need add correct name for openid item and email
+ci_databags = YAML.load_file('/tmp/infrastructure-users-ci.yml')
+ci_items = ci_databags["data bags"][0]
+ci_users = ci_items["users"]["items"]
+creds = data_bag('users')
+ruby_block "Check-users" do
+  block do
+    db = Mysql.connect("#{db_address}", "#{node["gerrit"]["db"]["tunable"]["username"]}", "#{node["gerrit"]["db"]["tunable"]["password"]}", "#{node["gerrit"]["db"]["tunable"]["database"]}")
+    new_keys = 0
+    new_users = 0
+    updated_keys = 0
+    Chef::Log.info "Connected to DB.."
+    ci_users.each do |cred|
+      if cred.class == Hash
+        cred = cred.keys[0]
+        is_gerrit_admin = true
+        flag = 1
+      else
+        is_gerrit_admin = false
+        flag = 3
+      end
+      user = data_bag_item('users', cred)
+      # DEBUG mock
+      unless user["email"]
+        user["email"] = "#{user["id"]}@alff.org"
+      end
+      unless user["openid"]
+        user["openid"] = user["id"]
+      end
+      unless user["full_name"]
+        user["full_name"] = user["id"]
+      end
+      # End of mock
+      query = db.query("SELECT account_id FROM accounts WHERE preferred_email='#{user["email"]}'")
+      if query.size >0
+        id = query.fetch_row[0].to_i
+        ssh_query = db.query("Select account_id FROM account_ssh_keys WHERE account_id=#{id}")
+        if ssh_query.size >0
+          Chef::Log.info "Update key for user #{user["id"]}."
+          update_query = db.query("UPDATE account_ssh_keys SET ssh_public_key='#{user["ssh_keys"]}' WHERE account_id=#{id}")
+          updated_keys +=1
+        else
+          Chef::Log.info "Create new key for user #{user["id"]}."
+          create_query = db.query("INSERT INTO `account_ssh_keys` VALUES ('#{user["ssh_keys"]}', 'Y', #{id}, 1)")
+          new_keys +=1
+        end
+        query = db.query("UPDATE `account_group_members` SET group_id=#{flag} WHERE account_id=#{id}")
+        query = db.query("UPDATE `account_group_members_audit` SET group_id=#{flag} WHERE account_id=#{id}")
+      else
+        Chef::Log.info "Start procedure of new user creating with id #{user["id"]}.."
+        query = db.query("SELECT MAX(account_id) FROM accounts")
+        unless query.fetch_row[0]
+          max_id = 0
+        else
+          query = db.query("SELECT MAX(account_id) FROM accounts")
+          max_id = query.fetch_row[0].to_i
+        end
+        max_id +=1
+        # Create new uniq id
+        query = db.query("INSERT INTO `account_id` VALUES (#{max_id})")
+        Chef::Log.info "Inserting new id.."
+        # Add new account
+        Chef::Log.info "Creating new account.."
+        query = db.query("INSERT INTO `accounts` VALUES (CURRENT_TIMESTAMP,'#{user["full_name"]}','#{user["email"]}',NULL,25,'Y','Y',NULL,NULL,'N',NULL,NULL,'N','N','N',#{max_id})")
+        # Add new account external ids
+        Chef::Log.info "Insert external id.."
+        query = db.query("INSERT INTO `account_external_ids` VALUES (#{max_id},'#{user["email"]}',NULL,'#{user["openid"]}')")
+        # Add full rights to user
+        Chef::Log.info "Grant access rights to user.."
+        query = db.query("INSERT INTO `account_group_members` VALUES (#{max_id},#{flag})")
+        query = db.query("INSERT INTO `account_group_members_audit` VALUES (#{max_id},NULL,NULL,#{max_id},#{flag},CURRENT_TIMESTAMP)")
+        # Add ssh keys
+        Chef::Log.info "Insert ssh pub key.."
+        query = db.query("INSERT INTO `account_ssh_keys` VALUES ('#{user["ssh_keys"]}','Y',#{max_id},1)")
+        new_keys +=1
+        Chef::Log.info "Procedure of new user creating is complete. Account #{user["id"]} was added.."
+        new_users +=1
+      end
+    end
+    Chef::Log.info "New users created: #{new_users}."
+    Chef::Log.info "New keys added: #{new_keys}."
+    Chef::Log.info "Keys updated: #{updated_keys}."
+    puts ""
+    puts "New users created: #{new_users}."
+    puts "New keys added: #{new_keys}."
+    puts "Keys updated: #{updated_keys}."
+    sleep 5
+  end
+end

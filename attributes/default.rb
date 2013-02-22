@@ -2,6 +2,9 @@
 # Version of gerrit
 default["gerrit"]["version"] = "2.5.1"
 
+# Home
+default["gerrit"]["home"] = "/home/gerrit"
+
 # Container
 default["gerrit"]["user"] = "gerrit"
 
