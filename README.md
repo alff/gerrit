@@ -1,5 +1,4 @@
 gerrit
 ======
 
-Install gerrit service
-I was here. BaJIepka
+Install gerrit service.
