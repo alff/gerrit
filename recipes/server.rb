@@ -162,9 +162,6 @@ ci_file = cookbook_file "/tmp/infrastructure-users-ci.yml" do
 end
 ci_file.run_action(:create)
 # Need add correct name for openid item and email
-ci_databags = YAML.load_file('/tmp/infrastructure-users-ci.yml')
-ci_items = ci_databags["data bags"][0]
-ci_users = ci_items["users"]["items"]
 creds = data_bag('users')
 ruby_block "Check-users" do
   block do
@@ -174,14 +171,19 @@ ruby_block "Check-users" do
     new_users = 0
     updated_keys = 0
     Chef::Log.info "Connected to DB.."
-    ci_users.each do |cred|
-      if cred.class == Hash
-        cred = cred.keys[0]
-        is_gerrit_admin = true
-        flag = 1
+    creds.each do |cred|
+      if cred["gerrit"]
+        if cred["gerrit"] == "admin"
+          is_gerrit_admin = true
+          flag = 1
+        elsif cred["gerrit"] == "user"
+          is_gerrit_admin = false
+          flag = 3
+        else
+          Chef::Log.warn "Unknown type of users. Skipping.."
+        end
       else
-        is_gerrit_admin = false
-        flag = 3
+        next
       end
       user = data_bag_item('users', cred)
       # DEBUG mock

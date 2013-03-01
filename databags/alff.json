@@ -3,6 +3,7 @@
   "full_name": "Alex Khalkuziev",
   "openid": "https://www.google.com/accounts/o8/id?id=AItOawnFDxsIfqFd5be8oe_ju5Je015rgIinZDo",
   "email": "akhalkuziev@mirantis.com",
+  "gerrit": "admin",
   "groups": [ "sysadmin" ],
   "shell": "/bin/bash",
   "ssh_keys": "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA95lYBFgM9qC7WZKyd4hk5e66Dy6mFUdqyRPsCp4muSM58I/lHsCYmlYTxpn6ojWO6X9Z1EXxIH8NLn5HQ0w8vZPV1jmYNrq0TYOCFn/fIMRA/Qz9aYkVK+1sA6YuySA2T6riKWpHj+j0fZpoFtAUnp0M75pgC9AkNnyeKr9vQxW/mcAkgJG/brDmTRONO61mUwEZQJ1HmjXEgPYWaPdT79xegHBxPSwJq+q5yI0JhVxVUN6EtDaV5kAyUMd2rubBa06wWMbsbPU8VevMlPIVHcT+kXjfcTbExGayUJYVt09ksxkxArGSkycjpcV7KE9gxzE+A6ubju8VhvcQ1BDKmQ== alff@alffmac.local",
