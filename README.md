@@ -65,5 +65,11 @@ Example of supported data bags and yaml lists attached with cookbook and could b
             "env_run_lists": {
               }
            }
+
+!!!!!!WARNING!!!!!!!
+Temporary at first run attributes from role 'gerrit' doesn't work because they are saving when recipe compile time starts. But attributes from recipe are trying
+to check variable of attribute from role. Need to set it manualy.
+!!!!!!!!!!!!!!!!!!!!
+
 4. Upload roles on chef server and attach role 'gerrit' to target node.
 5. Start chef-client

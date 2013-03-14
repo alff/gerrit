@@ -212,6 +212,7 @@ ruby_block "Check-users" do
         end
         query = db.query("UPDATE `account_group_members` SET group_id=#{flag} WHERE account_id=#{id}")
         query = db.query("UPDATE `account_group_members_audit` SET group_id=#{flag} WHERE account_id=#{id}")
+        actual_list.push id
       else
         Chef::Log.info "Start procedure of new user creating with id #{user["id"]}.."
         query = db.query("SELECT MAX(account_id) FROM accounts")
@@ -241,22 +242,13 @@ ruby_block "Check-users" do
         new_keys +=1
         Chef::Log.info "Procedure of new user creating is complete. Account #{user["id"]} was added.."
         new_users +=1
+        actual_list.push max_id
       end
-      actual_list.push max_id
     end
+    Chef::Log.info "Disable users which are not in the actual list.."
     db = Mysql.connect("#{db_address}", "#{node["gerrit"]["db"]["tunable"]["username"]}", "#{node["gerrit"]["db"]["tunable"]["password"]}", "#{node["gerrit"]["db"]["tunable"]["database"]}")
-    current_list =[]
-    query = db.query("SELECT account_id FROM accounts")
-    query.each do |n|
-      current_list.push n[0]
-    end
-    disabled_list = actual_list - current_list
-    if disabled_list.size >0
-      disabled_ids = '"'+disabled_list.join('","')+'"'
-      Chef::Log.info "Disable users which are not in the current list.."
-      query = db.query("UPDATE `accounts` SET inactive='Y' WHERE NOT IN (disabled_ids)")
-      Chef::Log.info "Users disabled: #{disabled_list.size}"
-    end
+    enabled_ids = actual_list.join(',')
+    query = db.query("UPDATE `accounts` SET inactive='Y' WHERE `account_id` NOT IN (enabled_ids)")
     Chef::Log.info "New users created: #{new_users}."
     Chef::Log.info "New keys added: #{new_keys}."
     Chef::Log.info "Keys updated: #{updated_keys}."

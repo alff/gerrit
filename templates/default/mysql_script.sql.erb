@@ -1,4 +1,4 @@
-CREATE USER '<%=node["gerrit"]["db"]["tunable"]["username"] %>'@'<%= @db_address %>' IDENTIFIED BY '<%= node["gerrit"]["db"]["password"] %>';
+CREATE USER '<%=node["gerrit"]["db"]["tunable"]["username"] %>'@'<%= @db_address %>' IDENTIFIED BY '<%= node["gerrit"]["db"]["tunable"]["password"] %>';
 CREATE DATABASE <%=node["gerrit"]["db"]["tunable"]["database"] %>;
 ALTER DATABASE <%=node["gerrit"]["db"]["tunable"]["database"] %> charset=latin1;
 GRANT ALL ON <%=node["gerrit"]["db"]["tunable"]["database"] %>.* TO '<%=node["gerrit"]["db"]["tunable"]["username"] %>'@'<%= @db_address %>';
