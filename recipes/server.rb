@@ -172,11 +172,12 @@ ruby_block "Check-users" do
     updated_keys = 0
     Chef::Log.info "Connected to DB.."
     creds.each do |cred|
-      if cred["gerrit"]
-        if cred["gerrit"] == "admin"
+      user = data_bag_item('users', cred)
+      if user["gerrit"]
+        if user["gerrit"] == "admin"
           is_gerrit_admin = true
           flag = 1
-        elsif cred["gerrit"] == "user"
+        elsif user["gerrit"] == "user"
           is_gerrit_admin = false
           flag = 3
         else
@@ -185,7 +186,6 @@ ruby_block "Check-users" do
       else
         next
       end
-      user = data_bag_item('users', cred)
       # DEBUG mock
       unless user["email"]
         user["email"] = "#{user["id"]}@alff.org"
@@ -248,7 +248,7 @@ ruby_block "Check-users" do
     Chef::Log.info "Disable users which are not in the actual list.."
     db = Mysql.connect("#{db_address}", "#{node["gerrit"]["db"]["tunable"]["username"]}", "#{node["gerrit"]["db"]["tunable"]["password"]}", "#{node["gerrit"]["db"]["tunable"]["database"]}")
     enabled_ids = actual_list.join(',')
-    query = db.query("UPDATE `accounts` SET inactive='Y' WHERE `account_id` NOT IN (enabled_ids)")
+    query = db.query("UPDATE `accounts` SET inactive='Y' WHERE `account_id` NOT IN (#{enabled_ids})")
     Chef::Log.info "New users created: #{new_users}."
     Chef::Log.info "New keys added: #{new_keys}."
     Chef::Log.info "Keys updated: #{updated_keys}."
