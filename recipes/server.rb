@@ -248,7 +248,12 @@ ruby_block "Check-users" do
     Chef::Log.info "Disable users which are not in the actual list.."
     db = Mysql.connect("#{db_address}", "#{node["gerrit"]["db"]["tunable"]["username"]}", "#{node["gerrit"]["db"]["tunable"]["password"]}", "#{node["gerrit"]["db"]["tunable"]["database"]}")
     enabled_ids = actual_list.join(',')
-    query = db.query("UPDATE `accounts` SET inactive='Y' WHERE `account_id` NOT IN (#{enabled_ids})")
+    if enabled_ids.empty?
+      Chef::Log.warn "Disabling all users in gerrit."
+      query = db.query("UPDATE `accounts` SET inactive='Y'")
+    else
+      query = db.query("UPDATE `accounts` SET inactive='Y' WHERE `account_id` NOT IN (#{enabled_ids})")
+    end
     Chef::Log.info "New users created: #{new_users}."
     Chef::Log.info "New keys added: #{new_keys}."
     Chef::Log.info "Keys updated: #{updated_keys}."
