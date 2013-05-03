@@ -1,0 +1,15 @@
+<VirtualHost *:80>
+
+ServerName localhost
+LogLevel info
+ProxyRequests Off
+ProxyVia Off
+ProxyPreserveHost On
+
+<Proxy *>
+Order deny,allow
+Allow from all
+</Proxy>
+ProxyPass / http://127.0.0.1:8080/
+ProxyPassReverse / http://127.0.0.1:8080/
+</VirtualHost>

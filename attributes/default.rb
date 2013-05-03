@@ -8,11 +8,16 @@ default["gerrit"]["home"] = "/home/gerrit"
 # Container
 default["gerrit"]["user"] = "gerrit"
 
+##ATT stuff##
+#NOTE: Move to role or env attributes at the best
+default["gerrit"]["att"]["cas_url"] = "https://sso.sl.attcompute.com/cas/login"
+default["gerrit"]["att"]["cas_validate_url"] = "https://sso.sl.attcompute.com/cas/serviceValidate"
+
 # Some values
 default["gerrit"]["tunable"]["gerrit_site"] = "/opt/gerrit"
 # In some cases you could set 'fqdn' instead of 'ipaddress'
 default["gerrit"]["tunable"]["canonical_domain"] = ipaddress
-default["gerrit"]["tunable"]["canonical_port"] = "8080"
+default["gerrit"]["tunable"]["canonical_port"] = "80"
 
 # If we won't start gerrit set 'on'
 default["gerrit"]["tunable"]["no_start"] = 0
@@ -29,7 +34,7 @@ default["gerrit"]["tunable"]["heap_limit"] = "1380m"
 default["gerrit"]["tunable"]["ssh_listen_address"] = "*"
 default["gerrit"]["tunable"]["ssh_listen_port"] = "29418"
 # HTTP
-default["gerrit"]["tunable"]["url_listen_address"] = "*"
+default["gerrit"]["tunable"]["url_listen_address"] = "127.0.0.1"
 default["gerrit"]["tunable"]["url_listen_port"] = "8080"
 # SMTP
 default["gerrit"]["tunable"]["smtp_server"] = "localhost"

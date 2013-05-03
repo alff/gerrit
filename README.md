@@ -73,3 +73,12 @@ to check variable of attribute from role. Need to set it manualy.
 
 4. Upload roles on chef server and attach role 'gerrit' to target node.
 5. Start chef-client
+
+
+
+CHANGELOG
+v.1.2.0
+ * HTTP auth mode added
+ * CAS auth mode added
+ * Apache2 set as frontend proxy
+ * Couple minor bugs fixed

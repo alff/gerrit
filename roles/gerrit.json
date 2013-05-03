@@ -9,7 +9,11 @@
                 "db": {
                     "type": "MYSQL"
                 },
-                "auth_type": "OPENID"
+                "att": {
+                    "cas_url": "https://sso.sl.attcompute.com/cas/login",
+                    "cas_validate_url": "https://sso.sl.attcompute.com/cas/serviceValidate"
+                    },
+                "auth_type": "CAS"
             }
         },
         "chef_type": "role",

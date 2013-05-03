@@ -13,6 +13,12 @@
         port = <%= @db_port %>
 [auth]
         type = <%=node["gerrit"]["auth_type"] %>
+        <% case node["gerrit"]["auth_type"]
+        when "HTTP" %>
+        httpHeader = X-Forwarded-User
+      <% when "CAS" %>
+        httpHeader = CAS-User
+        <% end %>
 [sendemail]
         smtpServer = <%=node["gerrit"]["tunable"]["smtp_server"] %>
         smtpUser = <%=node["gerrit"]["tunable"]["smtp_user"] %>

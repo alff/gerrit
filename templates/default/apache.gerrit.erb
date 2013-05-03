@@ -1,0 +1,32 @@
+<VirtualHost *:80>
+
+ServerName <%= node["fqdn"] %>
+LogLevel info
+ProxyRequests Off
+ProxyVia Off
+ProxyPreserveHost On
+LoadModule auth_cas_module modules/mod_auth_cas.so
+CASLoginURL <%= node["gerrit"]["att"]["cas_url"] %>
+CASCookiePath /var/cache/apache2/mod_auth_cas/
+CASValidateURL <%= node["gerrit"]["att"]["cas_validate_url"] %>
+#Unless correct certificate is defined MUST BE uncommented
+CASValidateServer Off
+#CASDebug On
+
+<Location "/login/">
+AuthType CAS
+AuthName "Gerrit Code Review"
+<% if @userlist %>
+  Require user <%= @userlist %>
+<% else %>
+  Require valid-user
+<% end %>
+</Location>
+
+<Proxy *>
+Order deny,allow
+Allow from all
+</Proxy>
+ProxyPass / http://127.0.0.1:8080/
+ProxyPassReverse / http://127.0.0.1:8080/
+</VirtualHost>
