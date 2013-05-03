@@ -1,4 +1,4 @@
 [database]
-        password = <%= node["gerrit"]["db"]["password"] %>
+        password = <%= node["gerrit"]["db"]["tunable"]["password"] %>
 [sendemail]
         smtpPass = <%= node["gerrit"]["tunable"]["smtp_password"] %>

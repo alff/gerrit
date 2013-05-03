@@ -12,7 +12,18 @@
         username = <%=node["gerrit"]["db"]["tunable"]["username"] %>
         port = <%= @db_port %>
 [auth]
+<% case node["gerrit"]["auth_type"]
+when "HTTP", "CAS" %>
+        type = HTTP
+      <% else %>
         type = <%=node["gerrit"]["auth_type"] %>
+      <% end %>
+        <% case node["gerrit"]["auth_type"]
+        when "HTTP" %>
+        httpHeader = X-Forwarded-User
+      <% when "CAS" %>
+        httpHeader = CAS-User
+        <% end %>
 [sendemail]
         smtpServer = <%=node["gerrit"]["tunable"]["smtp_server"] %>
         smtpUser = <%=node["gerrit"]["tunable"]["smtp_user"] %>
