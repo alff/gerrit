@@ -80,6 +80,7 @@ remote_file "#{gerrit_home}/gerrit_distr.war" do
   source "http://gerrit.googlecode.com/files/gerrit-full-#{node["gerrit"]["version"]}.war"
   owner node["gerrit"]["user"]
   group "gerrit"
+  mode 0644
   not_if {File.exists?("#{gerrit_home}/gerrit_distr.war")}
 end
 
