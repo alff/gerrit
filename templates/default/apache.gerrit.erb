@@ -1,5 +1,6 @@
 <VirtualHost *:80>
 
+# Please make be sure that your host has correct fqdn! Otherwise it needs to replace on ip address!
 ServerName <%= node["fqdn"] %>
 LogLevel info
 ProxyRequests Off

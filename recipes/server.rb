@@ -152,11 +152,6 @@ end
 cookbook_file "/etc/apache2/sites-available/gerrit" do
   action :create_if_missing
 end
-ruby_block "Init-gerrit-site" do
-  block do
-    Chef::Log.info "Intialize config.."
-  end
-end
 
 #TODO: Check block supporting of different linux versions
 script "Cooking-apache" do
@@ -358,19 +353,27 @@ when "CAS"
   end
   userlist = t_group.join(' ')
 
+  # Ugly workaround with apache reload in Ubuntu.
+  # Looks like standart resource does not reload apache service. Too bad. :(
+  script "Reload-apache" do
+    interpreter "bash"
+    code <<-EOH
+    service apache2 reload
+    EOH
+    action :nothing
+  end
+
   template "/etc/apache2/sites-available/gerrit" do
     source "apache.gerrit.erb"
     variables(
       :userlist => userlist
     )
-  notifies :reload, "service[apache2]"
+  notifies :run, "script[Reload-apache]"
   end
 
   #NOTE: Think about correct set admin rights in gerrit. Add in next version
   ruby_block "Info-mode" do
   block do
-    puts "USERLIST: #{userlist.inspect}"
-    sleep 4
     Chef::Log.info "CAS auth mode was enabled.."
   end
   end
