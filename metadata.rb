@@ -8,7 +8,7 @@ version          "1.2.0"
 
 recipe           "gerrit::server", "Installs/Configures gerrit"
 
-supports         ubuntu
+supports         "ubuntu"
 
-depends          java
-depends          mysql
+depends          "java"
+depends          "mysql"
