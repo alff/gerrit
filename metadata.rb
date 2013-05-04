@@ -11,4 +11,5 @@ recipe           "gerrit::server", "Installs/Configures gerrit"
 supports         "ubuntu"
 
 depends          "java"
+depends          "libapache2-mod-auth-cas"
 depends          "mysql"
