@@ -2,6 +2,13 @@
 
 This file is used to list changes made in each version of gerrit.
 
+## 1.2.0
+
+* HTTP auth mode added
+* CAS auth mode added
+* Apache2 set as frontend proxy
+* Couple minor bugs fixed
+
 ## 0.1.0:
 
 * Initial release of gerrit
