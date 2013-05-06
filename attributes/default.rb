@@ -31,6 +31,7 @@ default["gerrit"]["user"] = "gerrit"
 #NOTE: Move to role or env attributes at the best
 default["gerrit"]["att"]["cas_url"] = "https://sso.sl.attcompute.com/cas/login"
 default["gerrit"]["att"]["cas_validate_url"] = "https://sso.sl.attcompute.com/cas/serviceValidate"
+default["gerrit"]["att"]["cas_root_proxied_as"] = "https://reviews.sl.attcompute.com"
 
 # Some values
 default["gerrit"]["tunable"]["gerrit_site"] = "/opt/gerrit"

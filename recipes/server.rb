@@ -17,12 +17,6 @@
 # limitations under the License.
 #
 
-# Recipe installs and configure gerrit server
-# with support embeded and external DBs.
-#
-
-# author Alex Khalkuziev (akhalkuziev@mirantis.com)
-
 chef_gem "ruby-mysql" do
   action :install
 end
@@ -162,8 +156,11 @@ end
 
 unless node["gerrit"]["init_state"] && node["gerrit"]["init_state"] == "ok"
 # TODO: Split CAS, HTTP and OPENID  auth as separate attributes. Will be in next version.
-# TODO: Use Apache cookbook instead of that temporary workaround
-%w{ apache2 libapache2-mod-proxy-html libapache2-mod-auth-cas }.each do |pack|
+include_recipe "apache2"
+include_recipe "apache2::mod_auth_cas"
+include_recipe "libapache2-mod-auth-cas"
+%w{ libapache2-mod-proxy-html }.each do |pack|
+include_recipe 'libapache2-mod-auth-cas'
   package pack do
     action :install
   end
@@ -185,9 +182,6 @@ a2enmod auth_cas
   EOH
 end
 
-service "apache2" do
-  action [:enable, :start ]
-end
 
   #TODO: Need to inmprove this part (remove executes and scripts)
   execute "Create-gerrit-DB" do

@@ -10,6 +10,7 @@
   CASCookiePath /var/cache/apache2/mod_auth_cas/
   CASValidateURL <%= node["gerrit"]["att"]["cas_validate_url"] %>
   CASValidateServer Off
+  CASRootProxiedAs <%= node["gerrit"]["att"]["cas_root_proxied_as"] %>
 
   <Location "/login/">
     AuthType CAS
