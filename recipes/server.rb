@@ -22,7 +22,6 @@ chef_gem "ruby-mysql" do
 end
 
 require 'mysql'
-require 'yaml'
 
 
 ::Chef::Recipe.send(:include, Opscode::OpenSSL::Password)
@@ -34,7 +33,19 @@ else
   node.save
 end
 
+# Define some requirement stuff
 gerrit_home = node["gerrit"]["home"]
+creds = data_bag('users')
+
+# Define hash dictionary
+dict={}
+dict["auth_type"] = node["gerrit"]["auth_type"]
+dict["actual_list"] = []
+dict["new_keys"] = 0
+dict["new_users"] = 0
+dict["updated_keys"] = 0
+
+
 #jdk instalation
 include_recipe "java"
 
@@ -52,6 +63,9 @@ when "MYSQL"
   end
     db_address = mysql_server["mysql"]["bind_address"]
     db_port = mysql_server["mysql"]["port"]
+
+else
+  Chef::Application.fatal!("This version doesn't support that DB type. Please, use MYSQL.")
 end
 if node["gerrit"]["tunable"]["canonical_port"] && node["gerrit"]["tunable"]["canonical_port"] !="80"
   canonical_url = "#{node["gerrit"]["tunable"]["canonical_domain"]}:#{node["gerrit"]["tunable"]["canonical_port"]}"
@@ -155,20 +169,20 @@ template "#{gerrit_home}/mysql_script.sql" do
 end
 
 unless node["gerrit"]["init_state"] && node["gerrit"]["init_state"] == "ok"
-# TODO: Split CAS, HTTP and OPENID  auth as separate attributes. Will be in next version.
-include_recipe "apache2"
-include_recipe "apache2::mod_auth_cas"
-include_recipe "libapache2-mod-auth-cas"
-%w{ libapache2-mod-proxy-html }.each do |pack|
-include_recipe 'libapache2-mod-auth-cas'
-  package pack do
-    action :install
-  end
-end
+  if dict["auth_type"] == "HTTP" || dict["auth_type"] == "CAS"
+    include_recipe "apache2"
+    include_recipe "apache2::mod_auth_cas"
+    include_recipe "libapache2-mod-auth-cas"
+    %w{ libapache2-mod-proxy-html }.each do |pack|
+       include_recipe 'libapache2-mod-auth-cas'
+       package pack do
+          action :install
+       end
+    end
 
-cookbook_file "/etc/apache2/sites-available/gerrit" do
-  action :create_if_missing
-end
+    cookbook_file "/etc/apache2/sites-available/gerrit" do
+       action :create_if_missing
+    end
 
 #TODO: Check block supporting of different linux versions
 script "Cooking-apache" do
@@ -181,6 +195,7 @@ a2enmod proxy_http
 a2enmod auth_cas
   EOH
 end
+  end
 
 
   #TODO: Need to inmprove this part (remove executes and scripts)
@@ -211,7 +226,6 @@ service "gerrit" do
   action [ :enable, :start ]
 end
 
-
 ruby_block "Set-init-state" do
   block do
     node.set_unless["gerrit"]["init_state"] = "ok"
@@ -220,6 +234,8 @@ ruby_block "Set-init-state" do
   end
 end
 end
+
+
 ## PROJECT SETUP ##
 service "apache2" do
   action :nothing
@@ -227,29 +243,10 @@ end
 
 # This part contains tuned part of user management for ATnT specific environment
 
-
-#ci_file = cookbook_file "/tmp/infrastructure-users-ci.yml" do
-#  action :nothing
-#end
-#ci_file.run_action(:create)
-#ci_databags = YAML.load_file('/tmp/infrastructure-users-ci.yml')
-#ci_items = ci_databags["data bags"][0]
-#ci_users = ci_items["users"]["items"]
-
-
-
-case node["gerrit"]["auth_type"]
+case dict["auth_type"]
 when "OPENID"
-  # Need add correct name for openid item and email
-  creds = data_bag('users')
-  ruby_block "Check-users" do
+  ruby_block "Setup-users" do
     block do
-      db = Mysql.connect("#{db_address}", "#{node["gerrit"]["db"]["tunable"]["username"]}", "#{node["gerrit"]["db"]["tunable"]["password"]}", "#{node["gerrit"]["db"]["tunable"]["database"]}")
-      actual_list = []
-      new_keys = 0
-      new_users = 0
-      updated_keys = 0
-      Chef::Log.info "Connected to DB.."
       creds.each do |cred|
         user = data_bag_item('users', cred)
         if user["gerrit"]
@@ -265,98 +262,22 @@ when "OPENID"
         else
           next
         end
-        # DEBUG mock
-        unless user["email"]
-          user["email"] = "#{user["id"]}@alff.org"
-        end
-        unless user["openid"]
-          user["openid"] = user["id"]
-        end
-        unless user["full_name"]
-          user["full_name"] = user["id"]
-        end
-        # End of mock
-        query = db.query("SELECT account_id FROM accounts WHERE preferred_email='#{user["email"]}'")
-        if query.size >0
-          id = query.fetch_row[0].to_i
-          ssh_query = db.query("Select account_id FROM account_ssh_keys WHERE account_id=#{id}")
-          if ssh_query.size >0
-            Chef::Log.info "Update key for user #{user["id"]}."
-            update_query = db.query("UPDATE account_ssh_keys SET ssh_public_key='#{user["ssh_keys"]}' WHERE account_id=#{id}")
-            updated_keys +=1
-          else
-            Chef::Log.info "Create new key for user #{user["id"]}."
-            create_query = db.query("INSERT INTO `account_ssh_keys` VALUES ('#{user["ssh_keys"]}', 'Y', #{id}, 1)")
-            new_keys +=1
-          end
-          query = db.query("UPDATE `account_group_members` SET group_id=#{flag} WHERE account_id=#{id}")
-          query = db.query("UPDATE `account_group_members_audit` SET group_id=#{flag} WHERE account_id=#{id}")
-          actual_list.push id
-        else
-          Chef::Log.info "Start procedure of new user creating with id #{user["id"]}.."
-          query = db.query("SELECT MAX(account_id) FROM accounts")
-          unless query.fetch_row[0]
-            max_id = 0
-          else
-            query = db.query("SELECT MAX(account_id) FROM accounts")
-            max_id = query.fetch_row[0].to_i
-          end
-          max_id +=1
-          # Create new uniq id
-          query = db.query("INSERT INTO `account_id` VALUES (#{max_id})")
-          Chef::Log.info "Inserting new id.."
-          # Add new account
-          Chef::Log.info "Creating new account.."
-          query = db.query("INSERT INTO `accounts` VALUES (CURRENT_TIMESTAMP,'#{user["full_name"]}','#{user["email"]}',NULL,25,'Y','Y',NULL,NULL,'N',NULL,NULL,'N','N','N',#{max_id})")
-          # Add new account external ids
-          Chef::Log.info "Insert external id.."
-          query = db.query("INSERT INTO `account_external_ids` VALUES (#{max_id},'#{user["email"]}',NULL,'#{user["openid"]}')")
-          # Add full rights to user
-          Chef::Log.info "Grant access rights to user.."
-          query = db.query("INSERT INTO `account_group_members` VALUES (#{max_id},#{flag})")
-          query = db.query("INSERT INTO `account_group_members_audit` VALUES (#{max_id},NULL,NULL,#{max_id},#{flag},CURRENT_TIMESTAMP)")
-          # Add ssh keys
-          Chef::Log.info "Insert ssh pub key.."
-          query = db.query("INSERT INTO `account_ssh_keys` VALUES ('#{user["ssh_keys"]}','Y',#{max_id},1)")
-          new_keys +=1
-          Chef::Log.info "Procedure of new user creating is complete. Account #{user["id"]} was added.."
-          new_users +=1
-          actual_list.push max_id
-        end
+        # Call setup user in db
+        dict = manage_users(node["gerrit"]["db"]["type"],dict)
       end
-      Chef::Log.info "Disable users which are not in the actual list.."
-      db = Mysql.connect("#{db_address}", "#{node["gerrit"]["db"]["tunable"]["username"]}", "#{node["gerrit"]["db"]["tunable"]["password"]}", "#{node["gerrit"]["db"]["tunable"]["database"]}")
-      enabled_ids = actual_list.join(',')
-      if enabled_ids.empty?
-        Chef::Log.warn "Disabling all users in gerrit."
-        query = db.query("UPDATE `accounts` SET inactive='Y'")
-      else
-        query = db.query("UPDATE `accounts` SET inactive='Y' WHERE `account_id` NOT IN (#{enabled_ids})")
-      end
-      Chef::Log.info "New users created: #{new_users}."
-      Chef::Log.info "New keys added: #{new_keys}."
-      Chef::Log.info "Keys updated: #{updated_keys}."
-      puts ""
-      puts "New users created: #{new_users}."
-      puts "New keys added: #{new_keys}."
-      puts "Keys updated: #{updated_keys}."
-      sleep 5
+    # Call checking of actual users
+        check_users(node["gerrit"]["db"]["type"],dict)
+    # Call logger
+    log_result(dict)
     end
   end
-when "HTTP"
-  ruby_block "Info-mode" do
-  block do
-    Chef::Log.info "HTTP auth mode was enabled.."
-  end
-  end
-when "CAS"
+when "CAS", "HTTP"
   creds = data_bag('users')
   t_group = []
   creds.each do |cred|
     user = data_bag_item('users', cred)
     if user["gerrit"]
-      # FIXME: Workaround for mirantis users whose don't have global UID
-      if user["id"] == 'alff' || user["id"] == 'yorik'
+      if user["externa_id"]
         t_group.push user["email"]
       else
         t_group.push user["id"]
@@ -364,7 +285,13 @@ when "CAS"
     else
       next
     end
+  # Call setup user in db
+  dict = manage_users(node["gerrit"]["db"]["type"],dict)
   end
+  # Call checking of actual users
+  check_users(node["gerrit"]["db"]["type"],dict)
+  # Call logger
+  log_result(dict)
   userlist = t_group.join(' ')
 
   # Ugly workaround with apache reload in Ubuntu.
@@ -385,10 +312,4 @@ when "CAS"
   notifies :run, "script[Reload-apache]"
   end
 
-  #NOTE: Think about correct set admin rights in gerrit. Add in next version
-  ruby_block "Info-mode" do
-  block do
-    Chef::Log.info "CAS auth mode was enabled.."
-  end
-  end
 end

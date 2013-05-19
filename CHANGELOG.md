@@ -2,6 +2,13 @@
 
 This file is used to list changes made in each version of gerrit.
 
+## 1.2.5
+
+* Split auth modes
+* Independent of auth scheme setup of user accounts
+* Fix some bugs
+
+
 ## 1.2.0
 
 * HTTP auth mode added
